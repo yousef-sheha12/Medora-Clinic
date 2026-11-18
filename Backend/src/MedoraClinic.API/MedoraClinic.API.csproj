@@ -15,4 +15,8 @@
     <ProjectReference Include="..\MedoraClinic.Infrastructure\MedoraClinic.Infrastructure.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="Controllers\" />
+  </ItemGroup>
+
 </Project>
