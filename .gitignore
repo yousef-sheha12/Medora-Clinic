@@ -1,0 +1,11 @@
+# Backend reference and planning documents
+/Backend/Details/
+
+# .NET build output
+**/bin/
+**/obj/
+
+# IDE and user-specific files
+.vs/
+*.user
+*.suo
