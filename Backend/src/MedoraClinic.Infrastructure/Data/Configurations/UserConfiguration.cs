@@ -8,52 +8,58 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
-        builder.Property(u => u.Email)
+        builder.HasKey(user => user.Id);
+
+        builder.Property(user => user.FullName)
+            .IsRequired()
+            .HasMaxLength(150);
+
+        builder.Property(user => user.Email)
             .IsRequired()
             .HasMaxLength(255);
 
-        builder.HasIndex(u => u.Email)
+        builder.HasIndex(user => user.Email)
             .IsUnique();
 
-        //builder.Property(u => u.FirstName)
-        //    .IsRequired()
-        //    .HasMaxLength(100);
+        builder.Property(user => user.PasswordHash)
+            .IsRequired()
+            .HasMaxLength(500);
 
-        //builder.Property(u => u.LastName)
-        //    .IsRequired()
-        //    .HasMaxLength(100);
+        builder.Property(user => user.Role)
+            .IsRequired()
+            .HasConversion<int>();
 
-        //builder.Property(u => u.PasswordHash)
-        //    .IsRequired();
+        builder.Property(user => user.IsEmailVerified)
+            .IsRequired()
+            .HasDefaultValue(false);
 
-        builder.Property(u => u.Role)
-            .IsRequired();
+        builder.Property(user => user.IsBlocked)
+            .IsRequired()
+            .HasDefaultValue(false);
 
-        builder.Property(u => u.IsBlocked)
-            .IsRequired();
-
-        //builder.Property(u => u.EmailConfirmed)
-        //    .IsRequired();
-
-
-        builder.HasOne(u => u.DoctorProfile)
-            .WithOne(d => d.User)
-            .HasForeignKey<DoctorProfile>(d => d.UserId)
+        builder.HasOne(user => user.DoctorProfile)
+            .WithOne(profile => profile.User)
+            .HasForeignKey<DoctorProfile>(profile => profile.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasOne(u => u.PatientProfile)
-            .WithOne(p => p.User)
-            .HasForeignKey<PatientProfile>(p => p.UserId)
+        builder.HasOne(user => user.PatientProfile)
+            .WithOne(profile => profile.User)
+            .HasForeignKey<PatientProfile>(profile => profile.UserId)
             .OnDelete(DeleteBehavior.Restrict);
 
-        builder.HasMany(u => u.VerificationCodes)
-            .WithOne(v => v.User)
-            .HasForeignKey(v => v.UserId)
+        builder.HasMany(user => user.VerificationCodes)
+            .WithOne(code => code.User)
+            .HasForeignKey(code => code.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasMany(u => u.Notifications)
-            .WithOne(n => n.User)
-            .HasForeignKey(n => n.UserId)
+        builder.HasMany(user => user.RefreshTokens)
+            .WithOne(token => token.User)
+            .HasForeignKey(token => token.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(user => user.Notifications)
+            .WithOne(notification => notification.User)
+            .HasForeignKey(notification => notification.UserId)
             .OnDelete(DeleteBehavior.Restrict);
     }
 }

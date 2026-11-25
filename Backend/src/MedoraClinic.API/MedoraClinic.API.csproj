@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="DotNetEnv" Version="3.2.0" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.23" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="9.0.19" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="9.0.23">
       <PrivateAssets>all</PrivateAssets>
@@ -20,10 +21,6 @@
   <ItemGroup>
     <ProjectReference Include="..\MedoraClinic.Application\MedoraClinic.Application.csproj" />
     <ProjectReference Include="..\MedoraClinic.Infrastructure\MedoraClinic.Infrastructure.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Controllers\" />
   </ItemGroup>
 
 </Project>

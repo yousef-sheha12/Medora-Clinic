@@ -2,8 +2,8 @@
 {
     public enum Role
     {
-        admin = 0,
-        doctor = 1,
-        patient = 2,
+        Admin = 0,
+        Doctor = 1,
+        Patient = 2,
     }
 }

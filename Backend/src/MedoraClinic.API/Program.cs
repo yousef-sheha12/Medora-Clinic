@@ -1,20 +1,41 @@
-using MedoraClinic.Application;
-using MedoraClinic.Infrastructure;
-//using ServiceStack.Text;
 using System.Text.Json.Serialization;
+using MedoraClinic.API.Exceptions;
+using MedoraClinic.API.Extensions;
+using MedoraClinic.API.Filters;
+using MedoraClinic.Application;
+using MedoraClinic.Application.Common;
+using MedoraClinic.Infrastructure;
+using MedoraClinic.Infrastructure.Configuration;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.OpenApi.Models;
-using DotNetEnv;
 
-Env.TraversePath().Load();
-Env.Load();
+DotEnvLoader.Load();
+
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .AddJsonOptions(op =>
+builder.Services.AddControllers(options =>
+    options.Filters.Add<FluentValidationFilter>())
+    .AddJsonOptions(options =>
+        options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter()));
+
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
     {
-        op.JsonSerializerOptions.Converters.Add(
-            new JsonStringEnumConverter());
-    });
+        var errors = context.ModelState
+            .SelectMany(entry => entry.Value?.Errors.Select(error => error.ErrorMessage)
+                ?? Enumerable.Empty<string>())
+            .ToArray();
+
+        return new BadRequestObjectResult(ApiResponse<object>.Failure(
+            "الطلب غير صالح.",
+            errors,
+            StatusCodes.Status400BadRequest));
+    };
+});
+
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
@@ -25,32 +46,23 @@ builder.Services.AddSwaggerGen(options =>
         Type = SecuritySchemeType.Http,
         Scheme = "bearer",
         BearerFormat = "JWT",
-        In = ParameterLocation.Header,
-        Description = "Enter your JWT token."
-    });
-
-    options.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
-        {
-            new OpenApiSecurityScheme
-            {
-                Reference = new OpenApiReference
-                {
-                    Type = ReferenceType.SecurityScheme,
-                    Id = "Bearer"
-                }
-            },
-            Array.Empty<string>()
-        }
+        In = ParameterLocation.Header
     });
 });
 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddApplication(builder.Configuration);
-
+builder.Services.AddApiAuthentication(builder.Configuration);
 builder.Services.AddOpenApi();
 
+builder.Services.AddCors(options => options.AddPolicy("Frontend", policy =>
+{
+    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+}));
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
@@ -60,7 +72,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
-
+app.UseCors("Frontend");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
