@@ -4,25 +4,29 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace MedoraClinic.Infrastructure.Data.Configurations;
 
-public class VerificationCodeConfiguration : IEntityTypeConfiguration<VerificationCode>
+public class VerificationCodeConfiguration
+    : IEntityTypeConfiguration<VerificationCode>
 {
     public void Configure(EntityTypeBuilder<VerificationCode> builder)
     {
-        builder.HasKey(v => v.Id);
+        builder.HasKey(code => code.Id);
 
-        builder.Property(v => v.Token)
+        builder.Property(code => code.TokenHash)
             .IsRequired()
-            .HasMaxLength(255);
+            .HasMaxLength(64);
 
-        builder.Property(v => v.Type)
+        builder.Property(code => code.Type)
+            .IsRequired()
+            .HasConversion<int>();
+
+        builder.Property(code => code.ExpiresAt)
             .IsRequired();
 
-        builder.Property(v => v.ExpiresAt)
-            .IsRequired();
+        builder.HasIndex(code => new { code.UserId, code.Type });
 
-        builder.HasOne(v => v.User)
-            .WithMany(u => u.VerificationCodes)
-            .HasForeignKey(v => v.UserId)
+        builder.HasOne(code => code.User)
+            .WithMany(user => user.VerificationCodes)
+            .HasForeignKey(code => code.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

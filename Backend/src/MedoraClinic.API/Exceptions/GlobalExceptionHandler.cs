@@ -1,64 +1,63 @@
-﻿using Microsoft.AspNetCore.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
-using System.Security.Authentication;
+using MedoraClinic.Application.Common;
+using Microsoft.AspNetCore.Diagnostics;
 
-namespace MedoraClinic.API.Exceptions
+namespace MedoraClinic.API.Exceptions;
+
+public sealed class GlobalExceptionHandler : IExceptionHandler
 {
-    public class GlobalExceptionHandler : IExceptionHandler
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
     {
-        public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
-        {
-            if (httpContext.Response.HasStarted)
-            {
-                return false;
-            }
-
-
-            var (status, title, detail) = exception switch
-            {
-                KeyNotFoundException or NotFoundException =>
-                    (StatusCodes.Status404NotFound, "Resource Not Found", exception.Message ?? "The requested resource could not be found."),
-
-                ArgumentException or BadRequestException =>
-                    (StatusCodes.Status400BadRequest, "Bad Request", exception.Message ?? "The request could not be processed."),
-
-                AuthenticationException =>
-                    (StatusCodes.Status401Unauthorized, "Authentication Failed", exception.Message ?? "Authentication Failed"),
-
-                UnauthorizedAccessException =>
-                    (StatusCodes.Status401Unauthorized, "Unauthorized", "Authentication is required to access this resource."),
-
-                InvalidOperationException or ConflictException =>
-                    (StatusCodes.Status409Conflict, "Conflict", exception.Message ?? "The request conflicts with the current resource state."),
-
-                _ => (StatusCodes.Status500InternalServerError, "Internal Server Error",
-                        "An unexpected error occurred.")
-            };
-
-
-
-            var problemDetails = new ProblemDetails
-            {
-                Status = status,
-                Title = title,
-                Detail = detail,
-                Instance = httpContext.Request.Path
-            };
-
-            httpContext.Response.StatusCode = problemDetails.Status.Value;
-            httpContext.Response.ContentType = "application/json";
-            await httpContext.Response.WriteAsJsonAsync(
-                new ExceptionApiResponse(false, problemDetails));
-
-            return true;
-        }
-        private record ExceptionApiResponse(bool Success, ProblemDetails Error);
-
+        _logger = logger;
     }
-    public class BadRequestException(string message) : Exception(message);
-    public class ConflictException(string message) : Exception(message);
-    public class NotFoundException(string message) : Exception(message);
-    public class AuthenticationException(string message) : Exception(message);
 
+    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext,Exception exception,CancellationToken cancellationToken)
+    {
+        if (httpContext.Response.HasStarted)
+            return false;
 
+        var (statusCode, message) = exception switch
+        {
+            NotFoundException => (StatusCodes.Status404NotFound, exception.Message),
+            BadRequestException => (StatusCodes.Status400BadRequest, exception.Message),
+            ConflictException => (StatusCodes.Status409Conflict, exception.Message),
+            UnauthorizedException => (StatusCodes.Status401Unauthorized, exception.Message),
+            _ => (StatusCodes.Status500InternalServerError, "حدث خطأ غير متوقع.")
+        };
+
+        if (statusCode >= 500)
+            _logger.LogError(exception, "Unhandled exception for {Path}", httpContext.Request.Path);
+        else
+            _logger.LogInformation(exception, "Request failed for {Path}", httpContext.Request.Path);
+
+        httpContext.Response.StatusCode = statusCode;
+        httpContext.Response.ContentType = "application/json; charset=utf-8";
+
+        var response = ApiResponse<object>.Failure(
+            message,
+            statusCode: statusCode);
+
+        await httpContext.Response.WriteAsJsonAsync(
+            response,
+            cancellationToken);
+
+        return true;
+    }
+}
+
+public sealed class BadRequestException(string message) : Exception(message)
+{
+}
+
+public sealed class ConflictException(string message) : Exception(message)
+{
+}
+
+public sealed class NotFoundException(string message) : Exception(message)
+{
+}
+
+public sealed class UnauthorizedException(string message) : Exception(message)
+{
 }

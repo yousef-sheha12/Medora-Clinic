@@ -14,8 +14,8 @@ public class PatientProfileConfiguration : IEntityTypeConfiguration<PatientProfi
             .IsRequired()
             .HasMaxLength(20);
 
-        //builder.Property(p => p.DateOfBirth)
-        //    .IsRequired();
+        builder.Property(p => p.DateOfBirth)
+            .IsRequired();
 
         builder.Property(p => p.Address)
             .IsRequired()

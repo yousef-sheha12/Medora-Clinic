@@ -1,4 +1,4 @@
-﻿using DotNetEnv;
+﻿using MedoraClinic.Infrastructure.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
 using Microsoft.Extensions.Configuration;
@@ -9,7 +9,7 @@ namespace MedoraClinic.Infrastructure.Data
     {
         public AppDbContext CreateDbContext(string[] args)
         {
-            Env.TraversePath().Load();
+            DotEnvLoader.Load();
 
             var basePath = Directory.Exists(Path.Combine(Directory.GetCurrentDirectory(), "MedoraClinic.API"))
                 ? Path.Combine(Directory.GetCurrentDirectory(), "MedoraClinic.API")

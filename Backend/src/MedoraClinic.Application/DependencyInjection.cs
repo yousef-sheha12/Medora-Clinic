@@ -1,13 +1,17 @@
-﻿using Microsoft.Extensions.Configuration;
+using MedoraClinic.Application.Interfaces.IServices;
+using MedoraClinic.Application.Services;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace MedoraClinic.Application
+namespace MedoraClinic.Application;
+
+public static class DependencyInjection
 {
-    public static class DependencyInjection
+    public static IServiceCollection AddApplication(this IServiceCollection services,IConfiguration configuration)
     {
-        public static IServiceCollection AddApplication(this IServiceCollection services, IConfiguration configuration)
-        {
-            return services;
-        }
+
+        services.AddScoped<IAuthService, AuthService>();
+
+        return services;
     }
 }
