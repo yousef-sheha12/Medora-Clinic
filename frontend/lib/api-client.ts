@@ -1,5 +1,5 @@
 import { ROUTES } from "@/lib/constants";
-import { clearTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
+import { clearTokens, extractTokens, getAccessToken, getRefreshToken, setTokens } from "@/lib/auth";
 import { ApiError } from "@/types/api";
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
@@ -25,65 +25,80 @@ function defaultMessage(status: number): string {
   return "Something went wrong. Please try again.";
 }
 
+const camel = (key: string) => key.charAt(0).toLowerCase() + key.slice(1);
+
 async function parseError(res: Response): Promise<HttpError> {
-    let body: unknown = null;
-    try {
-        body = await res.json();
-    } catch {
-        // Ignore JSON parse errors
-    }
-    const data = (body ?? {}) as Record<string, unknown>;
+  let text = "";
+  try {
+    text = await res.text();
+  } catch {
+  }
 
-    if (typeof data.detail === "string") {
-        return new HttpError(res.status, data.detail);
-    }
+  let body: unknown = null;
+  try {
+    body = text ? JSON.parse(text) : null;
+  } catch {
+    body = null;
+  }
+  if (body === null && text.trim() && text.length < 300 && !text.trimStart().startsWith("<")) {
+    return new HttpError(res.status, text.trim());
+  }
+  if (Array.isArray(body)) {
+    const messages = body
+      .map((item) => (typeof item === "string" ? item : (item as { description?: string })?.description))
+      .filter((m): m is string => !!m);
+    if (messages.length) return new HttpError(res.status, messages.join(" "));
+  }
 
+  const data = (body ?? {}) as Record<string, unknown>;
+  const errors = data.errors;
+  if (errors && typeof errors === "object" && !Array.isArray(errors)) {
     const fieldErrors: Record<string, string[]> = {};
-    for (const [key, value] of Object.entries(data)){
-        if (Array.isArray(value)) fieldErrors[key] = value.map(String);
-        else if (typeof value === "string") fieldErrors[key] = [value];
+    for (const [key, value] of Object.entries(errors)) {
+      fieldErrors[camel(key)] = Array.isArray(value) ? value.map(String) : [String(value)];
     }
-    const hasFields = Object.keys(fieldErrors).length > 0;
-
-    return new HttpError(
-        res.status,
-        hasFields ? "Please check the highlighted fields." : defaultMessage(res.status),
-        hasFields ? fieldErrors : undefined
-    );
-} 
+    if (Object.keys(fieldErrors).length) {
+      return new HttpError(res.status, "Please check the highlighted fields.", fieldErrors);
+    }
+  }
+  for (const key of ["detail", "message"]) {
+    const value = data[key];
+    if (typeof value === "string" && value) return new HttpError(res.status, value);
+  }
+  return new HttpError(res.status, defaultMessage(res.status));
+}
 
 let refreshPromise: Promise<boolean> | null = null;
 
 async function refreshAccessToken(): Promise<boolean> {
-    if (refreshPromise) return refreshPromise;
+  if (refreshPromise) return refreshPromise; 
 
-    refreshPromise = (async () => {
-        const refresh = getRefreshToken();
-        if (!refresh) return false;
-
-        try {
-            const res = await fetch(`$(BASE_URL)/auth/refresh`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({ refresh }),
-            });
-            if (!res.ok) return false;
-
-            const data = await res.json();
-            setTokens(data.access, data.refresh);
-            return true;
-        }catch {
-            return false;
-        }
-    })();
+  refreshPromise = (async () => {
+    const refresh = getRefreshToken();
+    if (!refresh) return false;
 
     try {
-        return await refreshPromise;
-    } finally {
-        refreshPromise = null;
+      const res = await fetch(`${BASE_URL}/Auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken: refresh }),
+      });
+      if (!res.ok) return false;
+
+      const tokens = extractTokens(await res.json());
+      if (!tokens) return false;
+      setTokens(tokens.access, tokens.refresh);
+      return true;
+    } catch {
+      return false;
     }
+  })();
+
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
 }
 
 type RequestOptions = {

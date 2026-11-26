@@ -40,3 +40,11 @@ export function clearTokens(): void {
 
     }
 }
+
+export function extractTokens(data: unknown): { access: string; refresh?: string } | null {
+  const d = (data ?? {}) as Record<string, unknown>; 
+  const access = d.accessToken ?? d.token ?? d.access;
+  const refresh = d.refreshToken ?? d.refresh;
+  if (typeof access !== "string") return null;
+  return { access, refresh: typeof refresh === "string" ? refresh : undefined };
+}
