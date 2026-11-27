@@ -1,8 +1,16 @@
+import { cacheLife } from "next/cache";
 
-export default function Footer() {
+async function getCurrent(){
+  "use cache";
+  cacheLife("max");
+  return new Date().getFullYear();
+}
+
+export default async function Footer() {
+  const year = await getCurrent();
   return (
     <footer className="border-t py-4 text-center text-sm text-muted-foreground">
-      © {new Date().getFullYear()} Medora Clinic. All rights reserved.
+      © {year} Medora Clinic. All rights reserved.
     </footer>
   );
 }
