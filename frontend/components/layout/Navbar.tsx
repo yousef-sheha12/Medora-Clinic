@@ -8,6 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { SidebarNav } from "@/components/layout/Sidebar";
 import { useAuth } from "@/providers/AuthProvider";
 import { ROLE_HOME, ROUTES } from "@/lib/constants";
+import Image from "next/image";
 
 export default function ({ withSidebar = false }: { withSidebar?:boolean }){
     const [open, setOpen] = useState(false);
@@ -29,8 +30,9 @@ export default function ({ withSidebar = false }: { withSidebar?:boolean }){
           </Button>
         )}
 
-        <Link href={homeHref} className="text-lg font-semibold">
-          Medora Clinic
+        <Link href={homeHref} className="flex items-center gap-2 text-lg font-semibold text-primary">
+          <Image src="/logo.png" alt="" width={32} height={32} priority />
+            Medora Clinic
         </Link>
 
         <div className="ml-auto flex items-center gap-2">
